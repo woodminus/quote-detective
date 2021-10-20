@@ -15,36 +15,33 @@
  */
 
 
-package ims.cs.lingdata;
+package ims.cs.mallet;
 
-import java.util.List;
+
+import cc.mallet.types.Instance;
+import ims.cs.lingdata.Document;
 
 /**
- * A corpus to hold documents read from plain text files.
- * Has only one partition and consists only of test data.
+ * Mallet "Instance" wrapper class for documents
  */
-public class PlainTextCorpus extends Corpus {
+public class PARCDocumentInstance extends Instance {
 
-    Partition partition;
+	private static final long serialVersionUID = -6933321582801583924L;
 
-    public PlainTextCorpus(List<Document> documentList) {
-        setDocumentList(documentList);
-        partition = new Partition();
-        partition.docList = documentList;
-    }
+	public transient Document document;
+	
+	private PARCDocumentInstance() {
+		super(null, null, null, null);
+	};
+	
+	public PARCDocumentInstance(Document document) {
+		super(document, null, document.docId, document);
+		this.document = document;
+	}
 
-    @Override
-    public Partition getTrain() {
-        return null;
-    }
-
-    @Override
-    public Partition getDev() {
-        return null;
-    }
-
-    @Override
-    public Partition getTest() {
-        return partition;
-    }
+	
+	public Document getDocument() {
+		return document;
+	}
+	
 }

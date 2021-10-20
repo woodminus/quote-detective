@@ -17,34 +17,7 @@
 
 package ims.cs.lingdata;
 
-import java.util.List;
-
-/**
- * A corpus to hold documents read from plain text files.
- * Has only one partition and consists only of test data.
- */
-public class PlainTextCorpus extends Corpus {
-
-    Partition partition;
-
-    public PlainTextCorpus(List<Document> documentList) {
-        setDocumentList(documentList);
-        partition = new Partition();
-        partition.docList = documentList;
-    }
-
-    @Override
-    public Partition getTrain() {
-        return null;
-    }
-
-    @Override
-    public Partition getDev() {
-        return null;
-    }
-
-    @Override
-    public Partition getTest() {
-        return partition;
-    }
+public abstract class Types {
+	public enum PartitionName {TRAIN, DEV, TEST};
+	public enum Genre {FICTION, NEWS, BIOGRAPHY};
 }

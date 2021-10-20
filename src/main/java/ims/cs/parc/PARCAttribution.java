@@ -15,36 +15,19 @@
  */
 
 
-package ims.cs.lingdata;
-
-import java.util.List;
+package ims.cs.parc;
 
 /**
- * A corpus to hold documents read from plain text files.
- * Has only one partition and consists only of test data.
+ * A single attribution.
  */
-public class PlainTextCorpus extends Corpus {
+public class PARCAttribution {
 
-    Partition partition;
+	// attribution roles as annotated in the PARC corpus
+	public enum Role { SOURCE, CONTENT, CUE, SUPPLEMENT };
 
-    public PlainTextCorpus(List<Document> documentList) {
-        setDocumentList(documentList);
-        partition = new Partition();
-        partition.docList = documentList;
-    }
+	// types by Pareti et al.
+	public enum Type { DIRECT, INDIRECT, MIXED };
 
-    @Override
-    public Partition getTrain() {
-        return null;
-    }
-
-    @Override
-    public Partition getDev() {
-        return null;
-    }
-
-    @Override
-    public Partition getTest() {
-        return partition;
-    }
+	public Role role;
+	public String id;
 }

@@ -17,34 +17,33 @@
 
 package ims.cs.lingdata;
 
-import java.util.List;
 
 /**
- * A corpus to hold documents read from plain text files.
- * Has only one partition and consists only of test data.
+ * A document ID for plain text documents.
+ * Since we require a WSJ-like directory structure, we can generate IDs from that.
  */
-public class PlainTextCorpus extends Corpus {
+public class PlainTextDocId implements DocumentId {
 
-    Partition partition;
+    String sectionStr;
+    String fileStr;
 
-    public PlainTextCorpus(List<Document> documentList) {
-        setDocumentList(documentList);
-        partition = new Partition();
-        partition.docList = documentList;
+    public PlainTextDocId (String section, String file) {
+        sectionStr = section;
+        fileStr = file;
     }
 
     @Override
-    public Partition getTrain() {
-        return null;
+    public String getSectionStr() {
+        return sectionStr;
     }
 
     @Override
-    public Partition getDev() {
-        return null;
+    public String getFileStr() {
+        return fileStr;
     }
 
     @Override
-    public Partition getTest() {
-        return partition;
+    public String toString() {
+        return sectionStr + "," + fileStr;
     }
 }
