@@ -98,4 +98,140 @@ public class QSample {
             return false;
         } else if (args[0].equals("--conf")) {   /* experiment mode: train/test a pre-trained model on PARC data */
             if (args.length != 2) {
-  
+                printHelp("Wrong number of arguments");
+                return false;
+            }
+
+            StaticConfig.loadConfig(args[1]);
+        } else if (args[0].equals("--crf")) {   /* make predictions for text files with CRF */
+            if (args.length != 3) {
+                printHelp("Wrong number of arguments");
+                return false;
+            }
+
+            StaticConfig.modelForTextFileMode = StaticConfig.Model.CRF;
+            setTextFileMode(args[1], args[2]);
+        } else if (args[0].equals("--sample")){   /* make predictions for text files with sampling model */
+            if (args.length != 3) {
+                printHelp("Wrong number of arguments");
+                return false;
+            }
+
+            StaticConfig.modelForTextFileMode = StaticConfig.Model.SAMPLE;
+            setTextFileMode(args[1], args[2]);
+        } else if (args[0].equals("--greedy")){   /* make predictions for text files with greedy model */
+            if (args.length != 3) {
+                printHelp("Wrong number of arguments");
+                return false;
+            }
+
+            StaticConfig.modelForTextFileMode = StaticConfig.Model.GREEDY;
+            setTextFileMode(args[1], args[2]);
+        } else {   /* Unknown option */
+            System.out.println("Unknown option: " + args[0] + "\n");
+            printHelp();
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Main command line tool
+     * @param args
+     */
+    public static void main(String[] args) throws ClassNotFoundException, ParserConfigurationException, SAXException, IOException {
+        // process command line arguments
+        boolean parsed = parseArguments(args);
+
+        // if the argument parser returns false, we cannot proceed, so exit
+        if (!parsed) return;
+
+
+        // set up logging
+        NewStaticPrinter.isOn = false;
+        String logFileName = NewStaticPrinter.getLogFileName(Common.pathConcat(StaticConfig.outputDirectory, "qsample-"));
+        MultiOutputStream.init(logFileName);
+        NewStaticPrinter.init(logFileName);
+
+
+        // copy the config over. this way, we can later know with which configuration the predictions were made
+        StaticConfig.saveConfig(logFileName+".conf");
+
+
+
+        if (StaticConfig.cliMode == StaticConfig.CliMode.TEST ||
+                StaticConfig.cliMode == StaticConfig.CliMode.TEXT) {   /* we are in text mode or test mode now */
+            ProcessedCorpus pc;
+
+            if (StaticConfig.cliMode == StaticConfig.CliMode.TEST) {   /* run the 2016 experiment */
+                System.out.println("Running test experiment from ACL 2016");
+                pc = new ProcessedCorpus(PARCCorpus.getInstance());
+            } else {   /* make predictions on the data provided by the user */
+                System.out.println("Processing all documents in " + StaticConfig.inputDirectory);
+                pc = PlainTextCorpusReader.readDocuments(StaticConfig.inputDirectory);
+            }
+
+            List<Document> testDocs = pc.getTest();
+
+            // load common model
+            QuotationPerceptrons perceptrons = Common.deserializeModels(StaticConfig.perceptronModelFile);
+
+            if (StaticConfig.modelForTextFileMode == StaticConfig.Model.GREEDY) {   /* greedy model */
+                System.out.println("\nUsing greedy model");
+
+                // run experiment
+                RunHeuristicTest.runHeuristicPipeline(null, testDocs, null, null,
+                        StaticConfig.beginMargin, StaticConfig.endMargin, StaticConfig.cueMargin, perceptrons);
+            } else if (StaticConfig.modelForTextFileMode == StaticConfig.Model.CRF) {   /* CRF model */
+                System.out.println("\nUsing CRF model");
+
+                // load crf
+                CrfClassifier crf = new CrfClassifier();
+                crf.loadCrf(StaticConfig.crfModelFile);
+
+                // run experiment
+                RunCrf.runCrfPipeline(null, testDocs, null, null,
+                        StaticConfig.beginMargin, StaticConfig.endMargin, StaticConfig.cueMargin,
+                        0, perceptrons, crf);
+            } else if (StaticConfig.modelForTextFileMode == StaticConfig.Model.SAMPLE) {   /* sampling model */
+                System.out.println("\nUsing SemiMarkov model");
+
+                // run experiment
+                RunPerceptronSampler.runPsPipeline(null, testDocs, null, null,
+                        StaticConfig.beginMargin, StaticConfig.endMargin, StaticConfig.cueMargin, perceptrons);
+            }
+        } else if (StaticConfig.cliMode == StaticConfig.CliMode.TRAIN) {   /* we are in training mode now */
+            // load data
+            ProcessedCorpus pc = new ProcessedCorpus(PARCCorpus.getInstance());
+            List<Document> trainDocs = pc.getTrain();
+            List<Document> testDocs = pc.getTest();
+            List<Document> valDocs = pc.getDev();
+            List<Document> resDocs = pc.getTrainSample(10);
+
+            if (StaticConfig.modelForTextFileMode == StaticConfig.Model.GREEDY) {   /* greedy model */
+                // run experiment
+                RunHeuristicTest.runHeuristicPipeline(trainDocs, testDocs, valDocs, resDocs,
+                        StaticConfig.beginMargin, StaticConfig.endMargin, StaticConfig.cueMargin, null);
+            } else if (StaticConfig.modelForTextFileMode == StaticConfig.Model.CRF) {   /* CRF model */
+                // run experiment
+                CrfClassifier crf = RunCrf.runCrfPipeline(trainDocs, testDocs, valDocs, resDocs,
+                        StaticConfig.beginMargin, StaticConfig.endMargin, StaticConfig.cueMargin, 500, null, null);
+
+                // save model
+                crf.saveCrf(logFileName + ".crfmodel");
+            } else if (StaticConfig.modelForTextFileMode == StaticConfig.Model.SAMPLE) {   /* sampling model */
+                // run experiment
+                QuotationPerceptrons perceptrons = RunPerceptronSampler.runPsPipeline(trainDocs, testDocs, valDocs, resDocs,
+                        StaticConfig.beginMargin, StaticConfig.endMargin, StaticConfig.cueMargin, null);
+
+                // save model
+                Common.serializeModels(perceptrons, logFileName + ".models");
+
+            }
+        } else {    /* unknown mode? */
+            throw new Error("Mode not implemented.");
+        }
+    }
+
+}
